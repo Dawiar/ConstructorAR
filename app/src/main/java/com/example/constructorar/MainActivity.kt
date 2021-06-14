@@ -316,6 +316,5 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
         }
         return false
     }
-
 }
 
