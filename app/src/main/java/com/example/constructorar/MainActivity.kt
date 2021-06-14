@@ -307,7 +307,6 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
         return true
     }
 
-
     /** Checks if we detected at least one plane.  */
     private fun hasTrackingPlane(): Boolean {
         for (plane in arSceneView?.session!!.getAllTrackables(Plane::class.java)) {
