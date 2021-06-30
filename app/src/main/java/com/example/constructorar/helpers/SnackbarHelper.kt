@@ -1,9 +1,9 @@
 package com.example.constructorar.helpers
 
-import android.R
 import android.app.Activity
 import android.view.View
 import android.widget.TextView
+import com.example.constructorar.R
 import com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback
 import com.google.android.material.snackbar.Snackbar
 
@@ -123,6 +123,7 @@ class SnackbarHelper {
             messageSnackbar?.show()
         }
     }
+
 
     companion object {
         private const val BACKGROUND_COLOR = -0x40cdcdce

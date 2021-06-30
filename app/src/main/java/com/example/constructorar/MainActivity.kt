@@ -1,12 +1,14 @@
 package com.example.constructorar
 
-
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.constructorar.helpers.SnackbarHelper
 import com.example.constructorar.helpers.TrackingStateHelper
 import com.google.ar.core.*
@@ -31,17 +33,12 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
 
     private val TAG: String = MainActivity::class.java.simpleName
 
-    private val SEARCHING_PLANE_MESSAGE = "Searching for surfaces..."
-    private val WAITING_FOR_TAP_MESSAGE = "Tap on a surface "
+    private var refDistance: Double = 0.0
 
-    private val refDistance = listOf(9.0, 30.5)
+    private var augImagesNames = listOf<String>()
 
-    private val augImagesNames = listOf(listOf("frame.png", "second.png"), listOf("frame.png", "earth.jpg"))
+    private var tooltip = ""
 
-    private val tooltips = listOf("Do as instruction shows. Scan QR-codes on front of printer and on back of printer's access door to verify this step",
-            "Do as instruction shows. Scan QR-codes on front of printer and on cartridge")
-
-    private val STEPS = 2
     private var currStep = 0
 
     private val messageSnackbarHelper = SnackbarHelper()
@@ -64,13 +61,21 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
 
     private var arSceneView: ArSceneView? = null
 
+    private val viewModel: MainViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel?> create(modelClass: Class<T>): T =
+                MainViewModel(application) as T
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         supportFragmentManager.addFragmentOnAttachListener { _, fragment ->
             if (fragment.id == R.id.arFragment) {
-                arFragment = fragment as ArFragment
-                arFragment!!.setOnTapArPlaneListener(this@MainActivity)
+                arFragment = (fragment as ArFragment).also {
+                    it.setOnTapArPlaneListener(this@MainActivity) }
             }
         }
         if (savedInstanceState == null) {
@@ -80,13 +85,22 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
                         .commit()
             }
         }
-        loadModels(currStep)
+
+        viewModel.instruction.observe(
+                this,
+                { instruction ->
+                    loadModels(instruction.modelName)
+                    refDistance = instruction.distance
+                    tooltip = instruction.tooltip
+                    augImagesNames = instruction.augImages
+                 })
+
         messageSnackbarHelper.setMaxLines(3)
     }
 
     /** Every time new image is processed by ARCore and ready, this method is called */
     private fun onUpdateFrame(frameTime: FrameTime) {
-        if (currStep >= STEPS) {
+        if (viewModel.currStep >= viewModel.maxSteps) {
             messageSnackbarHelper.showMessage(this, "Congratulations on completing instruction!")
             return
         }
@@ -98,9 +112,8 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             }
             if (updatedAugmentedImages.filter { augImagesNames[currStep].contains(it.name) }.size == 2) {
                 val distance = calculateDistanceInCM(updatedAugmentedImages.first(), updatedAugmentedImages.last())
-                if (abs(distance - refDistance[currStep]) < refDistance[currStep] * 0.15) {
-                    currStep++
-                    loadModels(currStep)
+                if (abs(distance - refDistance) < refDistance * 0.15) {
+                    viewModel.nextStep()
                     return
                 }
             }
@@ -108,29 +121,29 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
 
         val camera = frame?.camera
         // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
-        trackingStateHelper.updateKeepScreenOnFlag(camera!!.trackingState)
+        camera?.trackingState?.let { trackingStateHelper.updateKeepScreenOnFlag(it) }
         // Show a message based on whether tracking has failed, if planes are detected
         // or current tooltip message if the user has placed instruction
         val message = if (!isModelRendered) {
-            if (camera.trackingState == TrackingState.PAUSED) {
+            if (camera?.trackingState == TrackingState.PAUSED) {
                 if (camera.trackingFailureReason == TrackingFailureReason.NONE)
-                    SEARCHING_PLANE_MESSAGE
+                    getString(R.string.searching_for_plane)
                 else
-                    TrackingStateHelper.getTrackingFailureReasonString(camera)
+                    getString(TrackingStateHelper.getTrackingFailureReasonString(camera))
             } else if (hasTrackingPlane()) {
-                WAITING_FOR_TAP_MESSAGE
+                getString(R.string.waiting_for_tap)
             } else {
-                SEARCHING_PLANE_MESSAGE
+                getString(R.string.searching_for_plane)
             }
         } else {
-            tooltips[currStep]
+            tooltip
         }
         messageSnackbarHelper.showMessage(this, message)
     }
 
-    fun calculateDistanceInCM(first: AugmentedImage, second: AugmentedImage): Float {
-        val first = first.centerPose
-        val second = second.centerPose
+    fun calculateDistanceInCM(firstPicture: AugmentedImage, secondPicture: AugmentedImage): Float {
+        val first = firstPicture.centerPose
+        val second = secondPicture.centerPose
         val distanceX = first.tx() - second.tx()
         val distanceY = first.ty() - second.ty()
         val distanceZ = first.tz() - second.tz()
@@ -193,6 +206,7 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             configureSession()
             shouldConfigureSession = false
             arSceneView?.setupSession(session)
+            arSceneView?.scene?.addOnUpdateListener(::onUpdateFrame)
         }
 
         // Note that order matters the reverse OnPause() order applies here.
@@ -228,12 +242,12 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
         session?.configure(config)
     }
 
-    fun loadModels(number: Int) {
+    fun loadModels(name: String) {
         val weakActivity = WeakReference(this)
         ModelRenderable.builder()
                 .setSource(
                         this,
-                        Uri.parse("models/model$number.glb")
+                        Uri.parse("models/$name.glb")
                 )
                 .setIsFilamentGltf(true)
                 .setAsyncLoadEnabled(true)
@@ -262,7 +276,6 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             Toast.makeText(this, "Loading...", Toast.LENGTH_SHORT).show()
             return
         }
-
         // Create the Anchor.
         val anchor = hitResult.createAnchor()
         val anchorNode =
@@ -281,9 +294,9 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             model.setParent(anchorNode)
         }
 
-        arFragment?.planeDiscoveryController?.hide();
-        arFragment?.planeDiscoveryController?.setInstructionView(null);
-        arFragment?.arSceneView?.planeRenderer?.isEnabled = false;
+        arFragment?.planeDiscoveryController?.hide()
+        arFragment?.planeDiscoveryController?.setInstructionView(null)
+        arFragment?.arSceneView?.planeRenderer?.isEnabled = false
     }
 
 
@@ -317,4 +330,5 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
         return false
     }
 }
+
 

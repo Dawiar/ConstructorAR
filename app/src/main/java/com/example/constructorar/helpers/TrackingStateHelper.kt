@@ -2,6 +2,7 @@ package com.example.constructorar.helpers
 
 import android.app.Activity
 import android.view.WindowManager
+import com.example.constructorar.R
 import com.google.ar.core.Camera
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
@@ -42,24 +43,16 @@ class TrackingStateHelper(private val activity: Activity) {
     }
 
     companion object {
-        private const val INSUFFICIENT_FEATURES_MESSAGE =
-                "Can't find anything. Aim device at a surface with more texture or color."
-        private const val EXCESSIVE_MOTION_MESSAGE = "Moving too fast. Slow down."
-        private const val INSUFFICIENT_LIGHT_MESSAGE = "Too dark. Try moving to a well-lit area."
-        private const val BAD_STATE_MESSAGE =
-                "Tracking lost due to bad internal state. Please try restarting the AR experience."
-        private const val CAMERA_UNAVAILABLE_MESSAGE =
-                "Another app is using the camera. Tap on this app or try closing the other one."
 
-        fun getTrackingFailureReasonString(camera: Camera): String {
-            return when (val reason = camera.trackingFailureReason) {
-                TrackingFailureReason.NONE -> ""
-                TrackingFailureReason.BAD_STATE -> BAD_STATE_MESSAGE
-                TrackingFailureReason.INSUFFICIENT_LIGHT -> INSUFFICIENT_LIGHT_MESSAGE
-                TrackingFailureReason.EXCESSIVE_MOTION -> EXCESSIVE_MOTION_MESSAGE
-                TrackingFailureReason.INSUFFICIENT_FEATURES -> INSUFFICIENT_FEATURES_MESSAGE
-                TrackingFailureReason.CAMERA_UNAVAILABLE -> CAMERA_UNAVAILABLE_MESSAGE
-                else -> "Unknown tracking failure reason: $reason"
+        fun getTrackingFailureReasonString(camera: Camera): Int {
+            return when (camera.trackingFailureReason) {
+                TrackingFailureReason.NONE -> R.string.empty_string
+                TrackingFailureReason.BAD_STATE -> R.string.BAD_STATE_MESSAGE
+                TrackingFailureReason.INSUFFICIENT_LIGHT -> R.string.INSUFFICIENT_LIGHT_MESSAGE
+                TrackingFailureReason.EXCESSIVE_MOTION -> R.string.EXCESSIVE_MOTION_MESSAGE
+                TrackingFailureReason.INSUFFICIENT_FEATURES -> R.string.INSUFFICIENT_FEATURES_MESSAGE
+                TrackingFailureReason.CAMERA_UNAVAILABLE -> R.string.CAMERA_UNAVAILABLE_MESSAGE
+                else -> R.string.Unknown_tracking_state_failure
             }
         }
     }

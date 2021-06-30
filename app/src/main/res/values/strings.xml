@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">ConstructorAR</string>
+    <string name="searching_for_plane">Searching for surfaces…</string>
+    <string name="waiting_for_tap">Tap on a surface</string>
+    <string name="INSUFFICIENT_FEATURES_MESSAGE">Can\'t find anything. Aim device at a surface with more texture or color.</string>
+    <string name="BAD_STATE_MESSAGE">Tracking lost due to bad internal state. Please try restarting the AR experience.</string>
+    <string name="EXCESSIVE_MOTION_MESSAGE">Moving too fast. Slow down.</string>
+    <string name="INSUFFICIENT_LIGHT_MESSAGE">Too dark. Try moving to a well-lit area.</string>
+    <string name="CAMERA_UNAVAILABLE_MESSAGE">Another app is using the camera. Tap on this app or try closing the other one.</string>
+    <string name="empty_string"> </string>
+    <string name="Unknown_tracking_state_failure">Unknown tracking failure reason:</string>
 </resources>
