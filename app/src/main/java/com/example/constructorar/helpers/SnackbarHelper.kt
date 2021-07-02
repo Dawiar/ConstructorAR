@@ -97,7 +97,7 @@ class SnackbarHelper {
     ) {
         activity.runOnUiThread {
             messageSnackbar = Snackbar.make(
-                    (snackbarView ?: activity.findViewById(R.id.content)),
+                    (snackbarView ?: activity.findViewById(android.R.id.content)),
                     message,
                     Snackbar.LENGTH_INDEFINITE
             )

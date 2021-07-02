@@ -7,8 +7,7 @@ import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.*
 import com.example.constructorar.helpers.SnackbarHelper
 import com.example.constructorar.helpers.TrackingStateHelper
 import com.google.ar.core.*
@@ -21,6 +20,8 @@ import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
 import com.google.ar.sceneform.ux.TransformableNode
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.util.*
@@ -35,7 +36,7 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
 
     private var refDistance: Double = 0.0
 
-    private var augImagesNames = listOf<String>()
+    private var augImagesNames = emptyList<String>()
 
     private var tooltip = ""
 
@@ -74,8 +75,8 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
         setContentView(R.layout.activity_main)
         supportFragmentManager.addFragmentOnAttachListener { _, fragment ->
             if (fragment.id == R.id.arFragment) {
-                arFragment = (fragment as ArFragment).also {
-                    it.setOnTapArPlaneListener(this@MainActivity) }
+                arFragment = (fragment as? ArFragment).also {
+                    it?.setOnTapArPlaneListener(this@MainActivity) }
             }
         }
         if (savedInstanceState == null) {
@@ -86,14 +87,18 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             }
         }
 
-        viewModel.instruction.observe(
-                this,
-                { instruction ->
-                    loadModels(instruction.modelName)
-                    refDistance = instruction.distance
-                    tooltip = instruction.tooltip
-                    augImagesNames = instruction.augImages
-                 })
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.instruction.collect{ instruction ->
+                    instruction?.let {
+                        loadModels(it.modelName)
+                        refDistance = it.distance
+                        tooltip = it.tooltip
+                        augImagesNames = it.augImages
+                    }
+                }
+            }
+        }
 
         messageSnackbarHelper.setMaxLines(3)
     }
@@ -110,9 +115,13 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             for (augImage in updatedAugmentedImages) {
                 Log.i("augImage ${augImage.name} coords: ", augImage.centerPose.toString())
             }
-            if (updatedAugmentedImages.filter { augImagesNames[currStep].contains(it.name) }.size == 2) {
+            if (updatedAugmentedImages.size == 2) {
+                println("ssss")
+            }
+            if (updatedAugmentedImages.filter{ augImagesNames.contains(it.name) }.size == 2) {
                 val distance = calculateDistanceInCM(updatedAugmentedImages.first(), updatedAugmentedImages.last())
-                if (abs(distance - refDistance) < refDistance * 0.15) {
+                Log.i("Distance between 2 augImages is: ", distance.toString())
+                if (abs(distance - refDistance) < refDistance * 0.35) {
                     viewModel.nextStep()
                     return
                 }
