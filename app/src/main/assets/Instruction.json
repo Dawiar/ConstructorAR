@@ -1,0 +1,20 @@
+[
+	{
+		"modelName": "model0",
+		"tooltip": "First Tooltip",
+		"augImages": [
+			"frame.png",
+			"second.png"
+			],
+		"distance": 6.0
+	},
+	{
+	"modelName": "model1",
+		"tooltip": "Last Tooltip",
+		"augImages": [
+			"frame.png",
+			"earth.png"
+			],
+		"distance": 12.0
+	}
+]
