@@ -21,6 +21,8 @@ import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
 import com.google.ar.sceneform.ux.TransformableNode
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.lang.ref.WeakReference
@@ -86,19 +88,14 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
                         .commit()
             }
         }
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.instruction.collect{ instruction ->
-                    instruction?.let {
-                        loadModels(it.modelName)
-                        refDistance = it.distance
-                        tooltip = it.tooltip
-                        augImagesNames = it.augImages
-                    }
-                }
+        viewModel.instruction.onEach {
+            it?.let {
+                loadModels(it.modelName)
+                refDistance = it.distance
+                tooltip = it.tooltip
+                augImagesNames = it.augImages
             }
-        }
+        }.launchIn(lifecycleScope)
 
         messageSnackbarHelper.setMaxLines(3)
     }
@@ -115,10 +112,7 @@ class MainActivity : AppCompatActivity(), BaseArFragment.OnTapArPlaneListener {
             for (augImage in updatedAugmentedImages) {
                 Log.i("augImage ${augImage.name} coords: ", augImage.centerPose.toString())
             }
-            if (updatedAugmentedImages.size == 2) {
-                println("ssss")
-            }
-            if (updatedAugmentedImages.filter{ augImagesNames.contains(it.name) }.size == 2) {
+            if (updatedAugmentedImages.filter{ augImagesNames.contains(it.name) }.size == augImagesNames.size) {
                 val distance = calculateDistanceInCM(updatedAugmentedImages.first(), updatedAugmentedImages.last())
                 Log.i("Distance between 2 augImages is: ", distance.toString())
                 if (abs(distance - refDistance) < refDistance * 0.35) {

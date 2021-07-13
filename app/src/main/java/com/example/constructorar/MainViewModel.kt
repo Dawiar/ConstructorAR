@@ -22,7 +22,7 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
 
     private lateinit var instructions: List<InstructionModel>
 
-    private var _instruction: MutableStateFlow<InstructionModel?> = MutableStateFlow(null)
+    private val _instruction: MutableStateFlow<InstructionModel?> = MutableStateFlow(null)
 
      val instruction: StateFlow<InstructionModel?> = _instruction
 
